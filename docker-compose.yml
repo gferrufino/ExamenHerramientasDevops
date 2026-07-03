@@ -1,0 +1,51 @@
+services:
+  db:
+    image: 536342473074.dkr.ecr.us-east-1.amazonaws.com/db:latest
+    container_name: tienda_db
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_DATABASE: tienda_perritos
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - tienda_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: 536342473074.dkr.ecr.us-east-1.amazonaws.com/backend:latest
+    container_name: tienda_backend
+    environment:
+      PORT: 3001
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: admin123
+      DB_NAME: tienda_perritos
+      DB_PORT: 3306
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tienda_net
+
+  frontend:
+    image: 536342473074.dkr.ecr.us-east-1.amazonaws.com/frontend:latest
+    container_name: tienda_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - tienda_net
+
+volumes:
+  db_data:
+
+networks:
+  tienda_net:
+    driver: bridge
