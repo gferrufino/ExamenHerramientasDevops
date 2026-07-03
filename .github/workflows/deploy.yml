@@ -1,4 +1,4 @@
-name: Build, Push to ECR and Deploy to EC2
+name: Build and Push to Amazon ECR (Fargate Setup)
 
 on:
   push:
@@ -7,14 +7,13 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: 536342473074.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      - name: Checkout codigo
         uses: actions/checkout@v4
 
       - name: Configurar credenciales AWS
@@ -26,28 +25,19 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login a Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build y Push imágenes a ECR
+      - name: Build y Push Backend a ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -t $ECR_REGISTRY/backend:latest ./backend
-          docker push $ECR_REGISTRY/backend:latest
+          docker build -t $ECR_REGISTRY/tiendaperritos-backend:latest ./backend
+          docker push $ECR_REGISTRY/tiendaperritos-backend:latest
 
-          docker build -t $ECR_REGISTRY/db:latest ./db
-          docker push $ECR_REGISTRY/db:latest
-
-          docker build -t $ECR_REGISTRY/frontend:latest ./frontend
-          docker push $ECR_REGISTRY/frontend:latest
-
-      - name: Deploy en EC2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 536342473074.dkr.ecr.us-east-1.amazonaws.com
-            cd ~/Devopscompleto
-            git pull origin main
-            docker-compose pull
-            docker-compose up -d --remove-orphans
+      - name: Build y Push Frontend a ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t $ECR_REGISTRY/tiendaperritos-frontend:latest ./frontend
+          docker push $ECR_REGISTRY/tiendaperritos-frontend:latest
