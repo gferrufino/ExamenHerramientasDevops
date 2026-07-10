@@ -1,0 +1,118 @@
+# ==========================================
+# 1. BASE DE DATOS (Postgres)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: db
+        image: postgres:15 # Usamos la imagen oficial de Postgres directamente
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: tienda_perritos
+        - name: POSTGRES_USER
+          value: usuario_perritos
+        - name: POSTGRES_PASSWORD
+          value: password_seguro_123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db # Este nombre sirve de "HOST" para que el backend lo encuentre
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: db
+
+---
+# ==========================================
+# 2. BACKEND (Node.js)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  replicas: 2 # Kubernetes repartirá estas 2 copias entre tus dos t3.large
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: 825473902483.dkr.ecr.us-east-1.amazonaws.com/tiendaperritosbackendexamen # REEMPLAZA CON TU IMAGEN
+        ports:
+        - containerPort: 3001 # El puerto en el que escucha tu server.js
+        env:
+        - name: DATABASE_HOST
+          value: "db" # Apuesta al nombre del Service de arriba
+        - name: DATABASE_USER
+          value: "usuario_perritos"
+        - name: DATABASE_PASSWORD
+          value: "password_seguro_123"
+        - name: DATABASE_NAME
+          value: "tienda_perritos"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  ports:
+  - port: 3001
+  selector:
+    app: backend
+
+---
+# ==========================================
+# 3. FRONTEND (Nginx / HTML)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 2 # Repartido automáticamente en tus nodos t3.large
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 825473902483.dkr.ecr.us-east-1.amazonaws.com/tiendaperritosfrontendexamen # REEMPLAZA CON TU IMAGEN
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-servicio-publico
+spec:
+  type: LoadBalancer # Crucial: Esto le ordena a AWS crear un Balanceador de Carga real
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: frontend

@@ -1,43 +1,30 @@
-name: Build and Push to Amazon ECR (Fargate Setup)
+name: Deploy Tienda Perritos to Amazon EKS
 
 on:
   push:
     branches:
-      - main
-
-env:
-  AWS_REGION: us-east-1
+      - main # Cambia a master si tu rama principal se llama así
 
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout codigo
-        uses: actions/checkout@v4
+    - name: Checkout del código
+      uses: actions/checkout@v4
 
-      - name: Configurar credenciales AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configurar credenciales de AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1 # Reemplaza con la región de tu cluster (en tu foto se ve us-east-1a/1b, así que es us-east-1)
 
-      - name: Login a Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Actualizar el archivo Kubeconfig para conectar con el Cluster
+      run: |
+        aws eks update-kubeconfig --name ClusterTiendaPerritos --region us-east-1
 
-      - name: Build y Push Backend a ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          docker build -t $ECR_REGISTRY/tiendaperritos-backend:latest ./backend
-          docker push $ECR_REGISTRY/tiendaperritos-backend:latest
-
-      - name: Build y Push Frontend a ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          docker build -t $ECR_REGISTRY/tiendaperritos-frontend:latest ./frontend
-          docker push $ECR_REGISTRY/tiendaperritos-frontend:latest
+    - name: Desplegar archivos YAML en Kubernetes
+      run: |
+        # Esto buscará un archivo llamado k8s-deployment.yaml en la raíz de tu proyecto y lo subirá a los nodos
+        kubectl apply -f k8s-deployment.yaml

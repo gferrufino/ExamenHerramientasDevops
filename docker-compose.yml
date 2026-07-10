@@ -4,50 +4,38 @@ services:
   db:
     build: ./db
     container_name: tienda_db
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: admin123
-      MYSQL_DATABASE: tienda_perritos
+      POSTGRES_DB: tienda_perritos
+      POSTGRES_USER: usuario_perritos
+      POSTGRES_PASSWORD: tiendaperritos123
+    ports:
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
-    networks:
-      - tienda_net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin123"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - postgres_data:/var/lib/postgresql/data
 
   backend:
     build: ./backend
     container_name: tienda_backend
-    environment:
-      PORT: 3001
-      DB_HOST: db
-      DB_USER: root
-      DB_PASSWORD: admin123
-      DB_NAME: tienda_perritos
-      DB_PORT: 3306
+    restart: always
     ports:
-      - "3001:3001"
+      - "3001:3001" # Asumiendo que tu server.js escucha en el puerto 3001
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USER: usuario_perritos
+      DATABASE_PASSWORD: tiendaperritos123
+      DATABASE_NAME: tienda_perritos
     depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - tienda_net
+      - db
 
   frontend:
     build: ./frontend
     container_name: tienda_frontend
+    restart: always
     ports:
-      - "80:80"
+      - "80:80" # Tu servidor Nginx (default.conf) expondrá la web en el puerto 80
     depends_on:
       - backend
-    networks:
-      - tienda_net
 
 volumes:
-  db_data:
-
-networks:
-  tienda_net:
-    driver: bridge
+  postgres_data:
