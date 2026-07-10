@@ -3,7 +3,7 @@ name: Deploy Tienda Perritos to Amazon EKS
 on:
   push:
     branches:
-      - main # Cambia a master si tu rama principal se llama así
+      - main
 
 jobs:
   deploy:
@@ -18,7 +18,8 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1 # Reemplaza con la región de tu cluster (en tu foto se ve us-east-1a/1b, así que es us-east-1)
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: us-east-1
 
     - name: Actualizar el archivo Kubeconfig para conectar con el Cluster
       run: |
@@ -26,5 +27,4 @@ jobs:
 
     - name: Desplegar archivos YAML en Kubernetes
       run: |
-        # Esto buscará un archivo llamado k8s-deployment.yaml en la raíz de tu proyecto y lo subirá a los nodos
         kubectl apply -f k8s-deployment.yaml
